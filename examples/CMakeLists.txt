@@ -25,7 +25,6 @@ find_package(Ceres)
 find_package(PkgConfig)
 
 add_definitions(-DBT_USE_DOUBLE_PRECISION)
-find_package(Bullet)
 
 #find_package(tinyxml2)
 if (tinyxml2_FOUND)
@@ -40,9 +39,11 @@ else (tinyxml2_FOUND)
 endif (tinyxml2_FOUND)
 
 
-find_package(crossguid)
+find_package(crossguid QUIET)
 IF (crossguid_FOUND)
+    message("USING system crossguid")
 ELSE()
+    message("USING third_party/crossguid")
     SUBDIRS(../third_party/crossguid)
     set(crossguid_INCLUDE_DIRS ../third_party/crossguid)
     include_directories(${crossguid_INCLUDE_DIRS})
@@ -62,9 +63,11 @@ ELSE()
     add_definitions(-DZMQ_STATIC)
 ENDIF()
 
-find_package(nlohmann_json)
+find_package(nlohmann_json QUIET)
 IF ( nlohmann_json_FOUND)
+    message("USING system nlohmann_json")
 ELSE()
+    message("USING third_party/nlohmann_json")
     SET(nlohmann_json_FOUND TRUE)
     set(nlohmann_json_INCLUDE_DIRS ../third_party/nlohmann/include)
     include_directories(${nlohmann_json_INCLUDE_DIRS})
@@ -90,10 +93,12 @@ IF(WIN32)
 ENDIF()
 set(HAS_MESHCAT TRUE)
 
+pkg_check_modules(bullet REQUIRED bullet>=2.89)
 
-if (Bullet_FOUND)
+if (bullet_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-    include_directories(${BULLET_INCLUDE_DIRS})
+    include_directories(${bullet_INCLUDE_DIRS})
+    link_directories(${bullet_LIBRARY_DIRS})
     add_library(pybullet_visualizer_api STATIC pybullet_visualizer_api.cpp)
     target_link_libraries(pybullet_visualizer_api BulletRoboticsGUI BulletExampleBrowserLib
             BulletRobotics BulletFileLoader BulletWorldImporter BulletSoftBody BulletDynamics
@@ -101,6 +106,7 @@ if (Bullet_FOUND)
             OpenGLWindow gwen BussIK Bullet3Common pthread ${DL})
 
     if (Ceres_FOUND)
+        include_directories(${CERES_INCLUDE_DIRS})
         add_executable(billiard_opt_gui billiard_opt_gui.cpp ${TDS_HDRS})
         target_link_libraries(billiard_opt_gui pybullet_visualizer_api ${DL}
                 ${CERES_LIBRARIES})
@@ -169,12 +175,9 @@ if (HAS_MESHCAT)
     target_link_libraries(laikago_meshcat_example  pybullet_visualizer_api ${MESHCAT_LIBRARIES})
     
 endif (HAS_MESHCAT)
-endif (Bullet_FOUND)
-
-
+endif (bullet_FOUND)
 
 if (HAS_MESHCAT AND tinyxml2_FOUND)
-    
     add_executable(tiny_urdf_parser_meshcat_example tiny_urdf_parser_meshcat_example.cpp ${TDS_HDRS}) 
     target_link_libraries(tiny_urdf_parser_meshcat_example  tinyxml2 ${MESHCAT_LIBRARIES}) 
 
